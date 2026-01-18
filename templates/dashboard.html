@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Личный кабинет{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Личный кабинет</h1>
+<p>Добро пожаловать, {{ session.full_name }}!</p>
+
+<h3 class="mt-4">Мои счета:</h3>
+{% if accounts %}
+    <div class="row">
+    {% for account in accounts %}
+        <div class="col-md-6 mb-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Счет: {{ account.account_number }}</h5>
+                    <p class="card-text">Баланс: <strong>{{ account.balance }} ₽</strong></p>
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+    </div>
+{% else %}
+    <p>У вас пока нет счетов</p>
+{% endif %}
+
+<div class="mt-4">
+    <a href="/history" class="btn btn-info">История операций</a>
+    <a href="/transfer" class="btn btn-primary">Сделать перевод</a>
+</div>
+{% endblock %}

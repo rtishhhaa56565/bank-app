@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="jumbotron bg-light p-5 rounded">
+    <h1 class="display-4">Добро пожаловать в банк "Веб-Финанс"</h1>
+    <p class="lead">Современный и безопасный онлайн-банкинг.</p>
+    
+    {% if not session.user_id %}
+    <hr class="my-4">
+    <p>Для доступа к функциям банка войдите в систему или зарегистрируйтесь.</p>
+    <a class="btn btn-primary btn-lg" href="/login">Войти</a>
+    <a class="btn btn-success btn-lg" href="/register">Регистрация</a>
+    {% else %}
+    <hr class="my-4">
+    <p>Вы вошли как: {{ session.email }}</p>
+    <a class="btn btn-primary btn-lg" href="/dashboard">Перейти в кабинет</a>
+    {% endif %}
+</div>
+{% endblock %}
