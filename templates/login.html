@@ -5,27 +5,65 @@
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">
-                <h4>Вход в систему</h4>
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="fas fa-sign-in-alt"></i> Вход в систему</h4>
             </div>
             <div class="card-body">
-                <form method="POST">
+                <form method="POST" action="{{ url_for('login') }}">
                     <div class="mb-3">
-                        <label for="email" class="form-label">Email</label>
-                        <input type="email" class="form-control" id="email" name="email" required>
+                        <label for="email" class="form-label">Email адрес</label>
+                        <input type="email" class="form-control" id="email" name="email" 
+                               placeholder="Введите ваш email" required>
+                        <div class="form-text">Пример: user@example.com</div>
                     </div>
+                    
                     <div class="mb-3">
                         <label for="password" class="form-label">Пароль</label>
-                        <input type="password" class="form-control" id="password" name="password" required>
+                        <div class="input-group">
+                            <input type="password" class="form-control" id="password" name="password" 
+                                   placeholder="Введите пароль" required>
+                            <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                        <div class="form-text">Минимум 8 символов, заглавные и строчные буквы, цифры, спецсимволы</div>
                     </div>
-                    <button type="submit" class="btn btn-primary">Войти</button>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-sign-in-alt"></i> Войти
+                        </button>
+                    </div>
                 </form>
-                <p class="mt-3">
-                    Нет аккаунта? <a href="/register">Зарегистрируйтесь</a>
-                </p>
+                
+                <div class="mt-3 text-center">
+                    <p class="mb-1">Нет аккаунта? <a href="{{ url_for('register') }}">Зарегистрируйтесь</a></p>
+                    <p class="mb-0 text-muted small">Для тестирования используйте:</p>
+                    <p class="mb-0 text-muted small">Админ: admin@bank.ru / Admin123!</p>
+                    <p class="mb-0 text-muted small">Пользователь: user@test.ru / User123!</p>
+                </div>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('togglePassword').addEventListener('click', function() {
+    const passwordInput = document.getElementById('password');
+    const icon = this.querySelector('i');
+    
+    if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        passwordInput.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+});
+</script>
 {% endblock %}

@@ -1,19 +1,101 @@
 {% extends "base.html" %}
 
+{% block title %}Главная страница{% endblock %}
+
 {% block content %}
-<div class="jumbotron bg-light p-5 rounded">
-    <h1 class="display-4">Добро пожаловать в банк "Веб-Финанс"</h1>
-    <p class="lead">Современный и безопасный онлайн-банкинг.</p>
+<div class="row align-items-center">
+    <div class="col-md-6">
+        <h1 class="display-4 mb-4">Добро пожаловать в банк "Веб-Финанс"</h1>
+        <p class="lead mb-4">Современный и безопасный онлайн-банкинг для управления вашими финансами.</p>
+        
+        {% if not session.user_id %}
+        <div class="d-grid gap-2 d-md-flex">
+            <a href="{{ url_for('login') }}" class="btn btn-primary btn-lg px-4">
+                <i class="fas fa-sign-in-alt"></i> Войти в систему
+            </a>
+            <a href="{{ url_for('register') }}" class="btn btn-outline-primary btn-lg px-4">
+                <i class="fas fa-user-plus"></i> Зарегистрироваться
+            </a>
+        </div>
+        {% else %}
+        <div class="d-grid gap-2 d-md-flex">
+            <a href="{{ url_for('dashboard') }}" class="btn btn-primary btn-lg px-4">
+                <i class="fas fa-home"></i> Перейти в кабинет
+            </a>
+            <a href="{{ url_for('transfer') }}" class="btn btn-success btn-lg px-4">
+                <i class="fas fa-exchange-alt"></i> Сделать перевод
+            </a>
+        </div>
+        {% endif %}
+    </div>
     
-    {% if not session.user_id %}
-    <hr class="my-4">
-    <p>Для доступа к функциям банка войдите в систему или зарегистрируйтесь.</p>
-    <a class="btn btn-primary btn-lg" href="/login">Войти</a>
-    <a class="btn btn-success btn-lg" href="/register">Регистрация</a>
-    {% else %}
-    <hr class="my-4">
-    <p>Вы вошли как: {{ session.email }}</p>
-    <a class="btn btn-primary btn-lg" href="/dashboard">Перейти в кабинет</a>
-    {% endif %}
+    <div class="col-md-6 text-center">
+        <img src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" 
+             alt="Банк" class="img-fluid" style="max-height: 300px;">
+    </div>
 </div>
+
+<div class="row mt-5">
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 text-center">
+            <div class="card-body">
+                <i class="fas fa-shield-alt fa-3x text-primary mb-3"></i>
+                <h4 class="card-title">Безопасность</h4>
+                <p class="card-text">Ваши средства защищены современными технологиями шифрования и двухфакторной аутентификацией.</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 text-center">
+            <div class="card-body">
+                <i class="fas fa-bolt fa-3x text-success mb-3"></i>
+                <h4 class="card-title">Скорость</h4>
+                <p class="card-text">Мгновенные переводы 24/7. Операции выполняются в течение нескольких секунд.</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 text-center">
+            <div class="card-body">
+                <i class="fas fa-mobile-alt fa-3x text-info mb-3"></i>
+                <h4 class="card-title">Удобство</h4>
+                <p class="card-text">Доступ к банку с любого устройства. Простой и интуитивно понятный интерфейс.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if session.user_id %}
+<div class="card mt-4">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="fas fa-info-circle"></i> Быстрый доступ</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3">
+                <a href="{{ url_for('dashboard') }}" class="btn btn-outline-primary w-100 mb-2">
+                    <i class="fas fa-wallet"></i> Счета
+                </a>
+            </div>
+            <div class="col-md-3">
+                <a href="{{ url_for('transfer') }}" class="btn btn-outline-success w-100 mb-2">
+                    <i class="fas fa-money-bill-transfer"></i> Перевод
+                </a>
+            </div>
+            <div class="col-md-3">
+                <a href="{{ url_for('history') }}" class="btn btn-outline-info w-100 mb-2">
+                    <i class="fas fa-receipt"></i> История
+                </a>
+            </div>
+            <div class="col-md-3">
+                <a href="{{ url_for('profile') }}" class="btn btn-outline-secondary w-100 mb-2">
+                    <i class="fas fa-user-cog"></i> Профиль
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}
