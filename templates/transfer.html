@@ -2,6 +2,85 @@
 
 {% block title %}Перевод средств{% endblock %}
 
+{% block head %}
+<style>
+    .suggestions-container {
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
+        padding: 15px;
+        margin-bottom: 20px;
+        background-color: #f8f9fa;
+    }
+    .suggestion-card {
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        padding: 10px;
+        margin-bottom: 10px;
+        cursor: pointer;
+        transition: all 0.3s;
+        background-color: white;
+    }
+    .suggestion-card:hover {
+        background-color: #e9ecef;
+        border-color: #0d6efd;
+    }
+    .suggestion-card .account-number {
+        font-weight: bold;
+        color: #0d6efd;
+    }
+    .suggestion-card .owner-name {
+        color: #495057;
+    }
+    .suggestion-card .balance {
+        color: #198754;
+        font-weight: 500;
+    }
+    .search-results {
+        position: absolute;
+        z-index: 1000;
+        width: 100%;
+        max-height: 300px;
+        overflow-y: auto;
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 0 0 5px 5px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        display: none;
+    }
+    .search-result-item {
+        padding: 10px 15px;
+        cursor: pointer;
+        border-bottom: 1px solid #f8f9fa;
+    }
+    .search-result-item:hover {
+        background-color: #f8f9fa;
+    }
+    .search-result-item .account-number {
+        font-weight: bold;
+    }
+    .search-result-item .owner-name {
+        font-size: 0.9em;
+        color: #6c757d;
+    }
+    .quick-select-btn {
+        margin: 2px;
+        font-size: 0.85em;
+    }
+    .loading-spinner {
+        display: none;
+        text-align: center;
+        padding: 10px;
+        color: #6c757d;
+    }
+    .no-results {
+        padding: 10px;
+        text-align: center;
+        color: #6c757d;
+        font-style: italic;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="row">
     <div class="col-md-8 mx-auto">
@@ -10,6 +89,40 @@
                 <h4 class="mb-0"><i class="fas fa-money-bill-transfer"></i> Перевод средств</h4>
             </div>
             <div class="card-body">
+                <!-- Блок быстрого выбора -->
+                <div class="suggestions-container mb-4">
+                    <h6 class="mb-3"><i class="fas fa-bolt text-warning"></i> Быстрый выбор получателя</h6>
+                    
+                    <!-- Последние получатели -->
+                    <div id="recentRecipients" class="mb-3">
+                        <small class="text-muted d-block mb-2">Последние переводы:</small>
+                        <div id="recentList" class="d-flex flex-wrap">
+                            <div class="loading-spinner">Загрузка...</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Рекомендуемые контакты -->
+                    <div id="suggestedContacts">
+                        <small class="text-muted d-block mb-2">Рекомендуемые контакты:</small>
+                        <div id="suggestedList" class="d-flex flex-wrap">
+                            <div class="loading-spinner">Загрузка...</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Быстрый поиск -->
+                    <div class="mt-3">
+                        <small class="text-muted d-block mb-2">Быстрый поиск по имени:</small>
+                        <div class="input-group">
+                            <input type="text" id="quickSearch" class="form-control form-control-sm" 
+                                   placeholder="Введите имя или email...">
+                            <button class="btn btn-sm btn-outline-primary" type="button" id="quickSearchBtn">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                        <div id="quickSearchResults" class="search-results mt-1"></div>
+                    </div>
+                </div>
+                
                 <form method="POST" action="{{ url_for('transfer') }}" id="transferForm">
                     <!-- Счет отправителя -->
                     <div class="mb-4">
@@ -27,13 +140,18 @@
                         </div>
                     </div>
                     
-                    <!-- Счет получателя -->
+                    <!-- Счет получателя с автодополнением -->
                     <div class="mb-4">
                         <label for="to_account" class="form-label">Счет получателя</label>
-                        <input type="text" class="form-control" id="to_account" name="to_account"
-                               placeholder="Введите 20-значный номер счета" required
-                               pattern="\d{20}" maxlength="20">
-                        <div class="form-text">Только цифры, ровно 20 символов</div>
+                        <div class="position-relative">
+                            <input type="text" class="form-control" id="to_account" name="to_account"
+                                   placeholder="Введите 20-значный номер счета или имя получателя" required
+                                   pattern="\d{20}" maxlength="20" autocomplete="off">
+                            <div class="form-text">
+                                Начните вводить номер счета или имя получателя для поиска
+                            </div>
+                            <div id="searchResults" class="search-results"></div>
+                        </div>
                     </div>
                     
                     <!-- Сумма -->
@@ -44,14 +162,14 @@
                                    placeholder="0.00" step="0.01" min="0.01" required>
                             <span class="input-group-text">₽</span>
                         </div>
-                        <div class="form-text">Минимальная сумма: 0.01 ₽</div>
+                        <div class="form-text">Минимальная сумма: 0.01 ₽, Максимальная: 1,000,000 ₽</div>
                     </div>
                     
                     <!-- Описание -->
                     <div class="mb-4">
                         <label for="description" class="form-label">Описание перевода (необязательно)</label>
                         <textarea class="form-control" id="description" name="description"
-                                  rows="3" placeholder="Назначение платежа"></textarea>
+                                  rows="2" placeholder="Назначение платежа, например: 'Оплата услуг' или 'Подарок'"></textarea>
                     </div>
                     
                     <!-- Итог -->
@@ -60,12 +178,19 @@
                             <h6 class="card-title">Итог операции</h6>
                             <div class="row">
                                 <div class="col-6">
-                                    <small class="text-muted">Сумма:</small><br>
+                                    <small class="text-muted">Сумма перевода:</small><br>
                                     <span id="summaryAmount" class="h5">0.00 ₽</span>
                                 </div>
                                 <div class="col-6 text-end">
                                     <small class="text-muted">Комиссия:</small><br>
                                     <span class="h5 text-success">0 ₽</span>
+                                </div>
+                            </div>
+                            <hr>
+                            <div class="row">
+                                <div class="col-12">
+                                    <small class="text-muted">Баланс после перевода:</small><br>
+                                    <span id="balanceAfter" class="h6 text-primary">0.00 ₽</span>
                                 </div>
                             </div>
                         </div>
@@ -84,6 +209,46 @@
             </div>
         </div>
         
+        <!-- Все пользователи банка -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-users"></i> Все пользователи банка</h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>ФИО</th>
+                                <th>Email</th>
+                                <th>Номер счета</th>
+                                <th>Баланс</th>
+                                <th>Действие</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in all_users %}
+                            {% for account in user.accounts %}
+                            <tr>
+                                <td>{{ user.full_name }}</td>
+                                <td>{{ user.email }}</td>
+                                <td><code>{{ account.account_number }}</code></td>
+                                <td>{{ "%.2f"|format(account.balance) }} ₽</td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary select-account-btn"
+                                            data-account="{{ account.account_number }}">
+                                        Выбрать
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
         <!-- Реквизиты для теста -->
         <div class="card mt-4">
             <div class="card-header">
@@ -92,10 +257,11 @@
             <div class="card-body">
                 <p class="mb-2">Для тестирования используйте эти номера счетов:</p>
                 <ul class="list-unstyled mb-0">
-                    <li><strong>40817810000000000001</strong> - Счет администратора</li>
-                    <li><strong>40817810000000000002</strong> - Счет тестового пользователя</li>
-                    <li><strong>40702810100000000001</strong> - Внешний счет 1</li>
-                    <li><strong>40702810100000000002</strong> - Внешний счет 2</li>
+                    <li><strong>40817810000000000001</strong> - Администратор Банка</li>
+                    <li><strong>40817810000000000002</strong> - Тестовый Пользователь</li>
+                    <li><strong>40817810000000000003</strong> - Иванов Иван Иванович</li>
+                    <li><strong>40817810000000000004</strong> - Петрова Мария Сергеевна</li>
+                    <li><strong>40817810000000000005</strong> - Сидоров Алексей Владимирович</li>
                 </ul>
             </div>
         </div>
@@ -107,17 +273,29 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const fromAccount = document.getElementById('from_account');
+    const toAccount = document.getElementById('to_account');
     const amountInput = document.getElementById('amount');
     const availableBalance = document.getElementById('availableBalance');
     const summaryAmount = document.getElementById('summaryAmount');
+    const balanceAfter = document.getElementById('balanceAfter');
+    const searchResults = document.getElementById('searchResults');
+    const quickSearch = document.getElementById('quickSearch');
+    const quickSearchResults = document.getElementById('quickSearchResults');
+    const quickSearchBtn = document.getElementById('quickSearchBtn');
+    
+    let searchTimeout = null;
+    let currentBalance = 0;
+    
+    // ==================== ОСНОВНЫЕ ФУНКЦИИ ====================
     
     // Обновление доступного баланса
     function updateBalance() {
         const selectedOption = fromAccount.options[fromAccount.selectedIndex];
         if (selectedOption && selectedOption.value) {
-            const balance = parseFloat(selectedOption.getAttribute('data-balance')) || 0;
-            availableBalance.textContent = balance.toFixed(2);
+            currentBalance = parseFloat(selectedOption.getAttribute('data-balance')) || 0;
+            availableBalance.textContent = currentBalance.toFixed(2);
         } else {
+            currentBalance = 0;
             availableBalance.textContent = '0.00';
         }
         updateSummary();
@@ -127,44 +305,285 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateSummary() {
         const amount = parseFloat(amountInput.value) || 0;
         summaryAmount.textContent = amount.toFixed(2) + ' ₽';
+        
+        // Расчет баланса после перевода
+        const balanceAfterTransfer = currentBalance - amount;
+        balanceAfter.textContent = balanceAfterTransfer.toFixed(2) + ' ₽';
+        
+        if (balanceAfterTransfer < 0) {
+            balanceAfter.classList.remove('text-primary');
+            balanceAfter.classList.add('text-danger');
+        } else {
+            balanceAfter.classList.remove('text-danger');
+            balanceAfter.classList.add('text-primary');
+        }
     }
     
     // Проверка суммы при вводе
     function validateAmount() {
-        const selectedOption = fromAccount.options[fromAccount.selectedIndex];
-        if (!selectedOption || !selectedOption.value) return;
-        
-        const balance = parseFloat(selectedOption.getAttribute('data-balance')) || 0;
         const amount = parseFloat(amountInput.value) || 0;
         
-        if (amount > balance) {
+        if (amount > currentBalance) {
             amountInput.classList.add('is-invalid');
             amountInput.setCustomValidity('Сумма превышает доступный баланс');
+            return false;
+        } else if (amount > 1000000) {
+            amountInput.classList.add('is-invalid');
+            amountInput.setCustomValidity('Максимальная сумма перевода: 1,000,000 ₽');
+            return false;
         } else {
             amountInput.classList.remove('is-invalid');
             amountInput.setCustomValidity('');
+            return true;
         }
     }
     
-    // Обработчики событий
+    // ==================== АВТОДОПОЛНЕНИЕ СЧЕТОВ ====================
+    
+    // Поиск счетов через API
+    async function searchAccounts(query) {
+        if (!query || query.length < 2) {
+            hideSearchResults();
+            return;
+        }
+        
+        try {
+            showLoading(searchResults);
+            const response = await fetch(`/api/search_accounts?q=${encodeURIComponent(query)}`);
+            const data = await response.json();
+            
+            displaySearchResults(data.accounts || [], searchResults, toAccount);
+        } catch (error) {
+            console.error('Ошибка поиска:', error);
+            showNoResults(searchResults, 'Ошибка при поиске');
+        }
+    }
+    
+    // Поиск по имени через API
+    async function searchByName(query) {
+        if (!query || query.length < 2) {
+            hideSearchResults(quickSearchResults);
+            return;
+        }
+        
+        try {
+            showLoading(quickSearchResults);
+            const response = await fetch(`/api/search_accounts?q=${encodeURIComponent(query)}`);
+            const data = await response.json();
+            
+            displaySearchResults(data.accounts || [], quickSearchResults, toAccount);
+        } catch (error) {
+            console.error('Ошибка поиска:', error);
+            showNoResults(quickSearchResults, 'Ошибка при поиске');
+        }
+    }
+    
+    // Загрузка последних получателей
+    async function loadRecentRecipients() {
+        try {
+            const response = await fetch('/api/recent_recipients');
+            const data = await response.json();
+            
+            const recentList = document.getElementById('recentList');
+            recentList.innerHTML = '';
+            
+            if (data.recipients && data.recipients.length > 0) {
+                data.recipients.forEach(recipient => {
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = 'btn btn-sm btn-outline-secondary quick-select-btn';
+                    button.innerHTML = `
+                        <i class="fas fa-history"></i> ${recipient.owner_name}<br>
+                        <small>${recipient.account_number}</small>
+                    `;
+                    button.title = `Последний перевод: ${recipient.last_amount} ₽ (${recipient.last_transaction_date})`;
+                    button.addEventListener('click', () => {
+                        toAccount.value = recipient.account_number;
+                        hideSearchResults();
+                    });
+                    recentList.appendChild(button);
+                });
+            } else {
+                recentList.innerHTML = '<small class="text-muted">Нет истории переводов</small>';
+            }
+        } catch (error) {
+            console.error('Ошибка загрузки получателей:', error);
+            document.getElementById('recentList').innerHTML = '<small class="text-muted">Ошибка загрузки</small>';
+        }
+    }
+    
+    // Загрузка рекомендуемых контактов
+    async function loadSuggestedContacts() {
+        try {
+            const response = await fetch('/api/suggested_contacts');
+            const data = await response.json();
+            
+            const suggestedList = document.getElementById('suggestedList');
+            suggestedList.innerHTML = '';
+            
+            if (data.suggestions && data.suggestions.length > 0) {
+                data.suggestions.forEach(contact => {
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = 'btn btn-sm btn-outline-info quick-select-btn';
+                    button.innerHTML = `
+                        <i class="fas fa-user"></i> ${contact.owner_name}<br>
+                        <small>${contact.account_number}</small>
+                    `;
+                    button.title = `Баланс: ${contact.balance} ₽`;
+                    button.addEventListener('click', () => {
+                        toAccount.value = contact.account_number;
+                        hideSearchResults();
+                    });
+                    suggestedList.appendChild(button);
+                });
+            } else {
+                suggestedList.innerHTML = '<small class="text-muted">Нет рекомендуемых контактов</small>';
+            }
+        } catch (error) {
+            console.error('Ошибка загрузки контактов:', error);
+            document.getElementById('suggestedList').innerHTML = '<small class="text-muted">Ошибка загрузки</small>';
+        }
+    }
+    
+    // ==================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
+    
+    // Показать загрузку
+    function showLoading(container) {
+        container.innerHTML = '<div class="loading-spinner">Поиск...</div>';
+        container.style.display = 'block';
+    }
+    
+    // Показать "нет результатов"
+    function showNoResults(container, message) {
+        container.innerHTML = `<div class="no-results">${message}</div>`;
+        container.style.display = 'block';
+    }
+    
+    // Скрыть результаты поиска
+    function hideSearchResults(container = null) {
+        if (container) {
+            container.style.display = 'none';
+        } else {
+            searchResults.style.display = 'none';
+            quickSearchResults.style.display = 'none';
+        }
+    }
+    
+    // Отображение результатов поиска
+    function displaySearchResults(accounts, container, targetInput) {
+        if (!accounts || accounts.length === 0) {
+            showNoResults(container, 'Счета не найдены');
+            return;
+        }
+        
+        container.innerHTML = '';
+        accounts.forEach(account => {
+            const item = document.createElement('div');
+            item.className = 'search-result-item';
+            item.innerHTML = `
+                <div class="account-number">${account.account_number}</div>
+                <div class="owner-name">
+                    ${account.owner_name} • ${account.balance} ${account.currency}
+                </div>
+            `;
+            item.addEventListener('click', () => {
+                targetInput.value = account.account_number;
+                container.style.display = 'none';
+            });
+            container.appendChild(item);
+        });
+        container.style.display = 'block';
+    }
+    
+    // Выбор счета из таблицы пользователей
+    function setupAccountSelection() {
+        document.querySelectorAll('.select-account-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const accountNumber = this.getAttribute('data-account');
+                toAccount.value = accountNumber;
+                
+                // Показать уведомление
+                const toast = document.createElement('div');
+                toast.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 end-0 m-3';
+                toast.style.zIndex = '9999';
+                toast.innerHTML = `
+                    <strong>Счет выбран!</strong> ${accountNumber}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                document.body.appendChild(toast);
+                
+                // Автоудаление уведомления через 3 секунды
+                setTimeout(() => {
+                    toast.remove();
+                }, 3000);
+            });
+        });
+    }
+    
+    // ==================== ОБРАБОТЧИКИ СОБЫТИЙ ====================
+    
+    // Обработчики для основного счета
     fromAccount.addEventListener('change', updateBalance);
+    
     amountInput.addEventListener('input', function() {
         updateSummary();
         validateAmount();
     });
     
-    // Инициализация
-    updateBalance();
-    updateSummary();
+    // Автодополнение для счета получателя
+    toAccount.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            searchAccounts(this.value);
+        }, 300);
+    });
+    
+    // Быстрый поиск по имени
+    quickSearch.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            searchByName(this.value);
+        }, 300);
+    });
+    
+    quickSearchBtn.addEventListener('click', function() {
+        searchByName(quickSearch.value);
+    });
+    
+    // Закрытие результатов при клике вне поля
+    document.addEventListener('click', function(event) {
+        if (!toAccount.contains(event.target) && !searchResults.contains(event.target)) {
+            hideSearchResults(searchResults);
+        }
+        if (!quickSearch.contains(event.target) && !quickSearchResults.contains(event.target)) {
+            hideSearchResults(quickSearchResults);
+        }
+    });
     
     // Валидация формы
     document.getElementById('transferForm').addEventListener('submit', function(e) {
-        validateAmount();
-        if (!this.checkValidity()) {
+        if (!validateAmount()) {
             e.preventDefault();
             e.stopPropagation();
         }
         this.classList.add('was-validated');
+    });
+    
+    // ==================== ИНИЦИАЛИЗАЦИЯ ====================
+    
+    // Загрузка начальных данных
+    updateBalance();
+    updateSummary();
+    loadRecentRecipients();
+    loadSuggestedContacts();
+    setupAccountSelection();
+    
+    // Скрытие результатов при нажатии ESC
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            hideSearchResults();
+        }
     });
 });
 </script>
